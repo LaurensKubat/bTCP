@@ -50,3 +50,8 @@ class Header:
         checksumless.append(self.data_length)
         checksum = binascii.crc32(checksumless)
         return checksum == self.checksum
+
+def new_header(header: bytes) -> Header:
+    buf = Header()
+    buf.deserialize(header)
+    return buf
