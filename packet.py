@@ -1,6 +1,8 @@
 import bTCP.header.py
 
-class packet:
+
+class Packet:
+
     def __init__(self, header, data):
         self.header = header
         self.data = data
@@ -8,6 +10,6 @@ class packet:
     def validate(self) -> bool:
         return True
 
-    def unpack(self, packet:bytes):
-        self.header = bTCP.header.new_header(packet[0:16])
-        self.data = packet[16:]
+    def unpack(self, pack: bytes):
+        self.header = bTCP.header.new_header(pack[0:16])
+        self.data = pack[16:]
