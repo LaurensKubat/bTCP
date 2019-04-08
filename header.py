@@ -6,8 +6,9 @@ class Header:
 
     def __init__(self, stream_id=0, SYN_number=0, ACK_number=0, flags=0, windows=0, data_length=0, checksum=0):
         self.stream_id = stream_id
-        self.SYN_number = SYN_number,
+        self.SYN_number = SYN_number
         self.ACK_number = ACK_number
+        #TODO change flags to a more accesible thing(class maybe)
         self.flags = flags
         self.windows = windows
         self.data_length = data_length
