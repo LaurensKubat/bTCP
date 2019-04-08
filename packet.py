@@ -8,7 +8,10 @@ class Packet:
         self.data = data
 
     def validate(self) -> bool:
-        return True
+        correct = True
+        correct & self.header.validate()
+
+        return correct
 
     def unpack(self, pack: bytes):
         self.header = bTCP.header.new_header(pack[0:16])
