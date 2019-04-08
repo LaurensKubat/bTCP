@@ -16,8 +16,9 @@ class Header:
     def genchecksum(self, header: bytearray):
         self.checksum = binascii.crc32(header)
 
-    # serialize the Header object into a bytearray
-    def serialize(self) -> bytearray:
+    # serialize the Header object into a bytearray, bytes are returned to ensure that it works the same as
+    # the example header in the given framework
+    def serialize(self) -> bytes:
         header = bytearray()
         header.append(self.stream_id)
         header.append(self.SYN_number)
@@ -26,10 +27,10 @@ class Header:
         header.append(self.windows)
         header.append(self.data_length)
         header.append(self.checksum)
-        return header
+        return bytes(header)
 
-    # deserialize a bytearray into the header object
-    def deserialize(self, header:bytearray):
+    # deserialize bytes into the header object
+    def deserialize(self, header: bytes):
         self.stream_id = header[0:3]
         self.SYN_number = header[4:6]
         self.ACK_number = header[6:8]
