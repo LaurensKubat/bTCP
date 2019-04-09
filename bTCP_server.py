@@ -5,7 +5,7 @@ import bTCP.packet
 parser = argparse.ArgumentParser()
 parser.add_argument("-w", "--window", help="Define bTCP window size", type=int, default=100)
 parser.add_argument("-t", "--timeout", help="Define bTCP timeout in milliseconds", type=int, default=100)
-parser.add_argument("-o","--output", help="Where to store file", default="tmp.file")
+parser.add_argument("-o", "--output", help="Where to store file", default="tmp.file")
 args = parser.parse_args()
 
 server_ip = "127.0.0.1"
@@ -18,7 +18,7 @@ header_format = "I"
 # Server is the server
 class Server:
 
-    def __init__(self, port, ip, window, timeout, output, cons:dict, sent:dict):
+    def __init__(self, port, ip, window, timeout, output, cons:dict, sent: dict):
         self.port = port
         self.ip = ip
         self.window = window
@@ -49,7 +49,7 @@ class Server:
             self.send_ack(packet)
         elif packet.is_syn() and not packet.is_ack():
             self.send_synack(packet)
-            self.cons[packet.header.stream_id] = {packet.header.SYN_number : packet}
+            self.cons[packet.header.stream_id] = {packet.header.SYN_number: packet}
         elif packet.is_ack():
             self.handle_ack(packet)
         else:
@@ -58,7 +58,7 @@ class Server:
                 return
             # add the packet to the correct window
             if packet.header.SYN_number not in self.cons[packet.header.stream_id]:
-                self.cons[packet.header.stream_id].update({packet.header.SYN_number : packet})
+                self.cons[packet.header.stream_id].update({packet.header.SYN_number: packet})
 
     # handle a received ACK
     def handle_ack(self, packet: bTCP.packet.Packet):
@@ -83,3 +83,4 @@ class Server:
     def send_ack(self, packet: bTCP.packet.Packet):
         tosend = bTCP.packet.Packet()
         tosend.header.stream_id = packet.header.stream_id
+        tosend.header.SYN_number = packet.header.SYN_number
