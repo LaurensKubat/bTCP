@@ -17,6 +17,11 @@ class Packet:
         self.header = bTCP.header.new_header(pack[0:16])
         self.data = pack[16:]
 
+    def pack(self) -> bytes:
+        data = bytearray(self.header.serialize())
+        data.append(self.data)
+        return data
+
     def is_syn(self):
         return self.is_syn()
 

@@ -1,4 +1,5 @@
-import socket, argparse
+import socket
+import argparse
 import bTCP.packet
 
 # Handle arguments
@@ -18,7 +19,7 @@ header_format = "I"
 # Server is the server
 class Server:
 
-    def __init__(self, port, ip, window, timeout, output, cons:dict, sent: dict):
+    def __init__(self, port, ip, window, timeout, output, cons: dict, sent: dict):
         self.port = port
         self.ip = ip
         self.window = window
@@ -44,6 +45,7 @@ class Server:
     def handle(self, packet: bTCP.packet.Packet):
         ok = packet.validate()
         if not ok:
+            # for now, we ignore any packets and wait for the client to resend them
             self.send_nack(packet)
         elif packet.is_syn() and packet.is_ack():
             self.send_ack(packet)
@@ -52,6 +54,8 @@ class Server:
             self.cons[packet.header.stream_id] = {packet.header.SYN_number: packet}
         elif packet.is_ack():
             self.handle_ack(packet)
+        elif packet.header.is_fin():
+            self.handle_fin(packet)
         else:
             # if the connection isn't established yet, ignore the packet
             if packet.header.stream_id not in self.cons:
@@ -74,6 +78,7 @@ class Server:
         tosend.header.stream_id = packet.header.stream_id
         tosend.header.SYN_number = packet.header.SYN_number + 1
         self.sent[tosend.header.SYN_number] = (tosend, False)
+        self.sock.send(tosend.pack())
 
     # TODO decide what to do when the checksum is not correct. Ignore the message or implement some sort of
     #  NACK to be more error resilient?
@@ -84,3 +89,13 @@ class Server:
         tosend = bTCP.packet.Packet()
         tosend.header.stream_id = packet.header.stream_id
         tosend.header.SYN_number = packet.header.SYN_number
+        self.sock.send(tosend.pack())
+
+    def handle_fin(self, packet: bTCP.packet.Packet):
+        self.send_finack(packet)
+
+    def send_finack(self, packet: bTCP.packet.Packet):
+        tosend = bTCP.packet.Packet()
+        tosend.header.stream_id = packet.header.stream_id
+        tosend.header.ACK_number = packet.header.SYN_number
+        self.sock.send(tosend.pack())
