@@ -1,6 +1,7 @@
 import socket
 import argparse
 import bTCP.packet
+import time
 
 # Handle arguments
 parser = argparse.ArgumentParser()
@@ -9,12 +10,17 @@ parser.add_argument("-t", "--timeout", help="Define bTCP timeout in milliseconds
 parser.add_argument("-o", "--output", help="Where to store file", default="tmp.file")
 args = parser.parse_args()
 
+timeout = 100
+
 server_ip = "127.0.0.1"
 server_port = 9001
 
 # Define a header format
 header_format = "I"
 
+SYNACK = 1
+NORMAL = 2
+FINACK = 3
 
 # Server is the server
 class Server:
@@ -39,6 +45,8 @@ class Server:
             data, addr = self.sock.recvfrom(1016)
             packet.unpack(data)
             self.handle(packet)
+            self.checksent()
+
 
     # handle the packet based on the flags of the header packet
     # TODO add handling of FIN, ADD a conn to the cons dict if msg is SYN. Add to correct conn dict
@@ -77,7 +85,7 @@ class Server:
         tosend = bTCP.packet.Packet()
         tosend.header.stream_id = packet.header.stream_id
         tosend.header.SYN_number = packet.header.SYN_number + 1
-        self.sent[tosend.header.SYN_number] = (tosend, False)
+        self.sent[tosend.header.SYN_number] = (tosend, SYNACK, time.time())
         self.sock.send(tosend.pack())
 
     # TODO decide what to do when the checksum is not correct. Ignore the message or implement some sort of
@@ -85,17 +93,27 @@ class Server:
     def send_nack(self, packet: bTCP.packet.Packet):
         return
 
+    # send an ack message based on the received packet
     def send_ack(self, packet: bTCP.packet.Packet):
         tosend = bTCP.packet.Packet()
         tosend.header.stream_id = packet.header.stream_id
         tosend.header.SYN_number = packet.header.SYN_number
         self.sock.send(tosend.pack())
 
+    # handle a received fin message
     def handle_fin(self, packet: bTCP.packet.Packet):
-        self.send_finack(packet)
-
-    def send_finack(self, packet: bTCP.packet.Packet):
         tosend = bTCP.packet.Packet()
         tosend.header.stream_id = packet.header.stream_id
         tosend.header.ACK_number = packet.header.SYN_number
+        self.sent[(packet.header.SYN_number, packet.header.stream_id)] = (tosend, FINACK, time.time())
         self.sock.send(tosend.pack())
+
+    # check whether any sent messages are lost
+    def checksent(self):
+        for key, value in self.sent:
+            packet, packtype, time = value
+            elapsed =  time.time() - time
+            if elapsed > timeout:
+                self.sock.send(packet.pack())
+
+
