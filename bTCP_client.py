@@ -1,7 +1,7 @@
 import socket, argparse, random
 from struct import *
 
-#Handle arguments
+# Handle arguments
 parser = argparse.ArgumentParser()
 parser.add_argument("-w", "--window", help="Define bTCP window size", type=int, default=100)
 parser.add_argument("-t", "--timeout", help="Define bTCP timeout in milliseconds", type=int, default=100)
@@ -11,14 +11,20 @@ args = parser.parse_args()
 destination_ip = "127.0.0.1"
 destination_port = 9001
 
-#bTCP header
+# bTCP header
 header_format = "I"
 bTCP_header = pack(header_format, randint(0,100))
 bTCP_payload = ""
 udp_payload = bTCP_header
 
-#UDP socket which will transport your bTCP packets
+# UDP socket which will transport your bTCP packets
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-#send payload
+# send payload
 sock.sendto(udp_payload, (destination_ip, destination_port))
+
+class Client:
+
+    def __init__(self, dest_ip, port):
+        self.dest_ip = dest_ip
+        self.port = port
