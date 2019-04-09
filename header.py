@@ -4,7 +4,7 @@ import binascii
 # Header represents the header of a bTCP package
 class Header:
 
-    def __init__(self, stream_id=0, SYN_number=0, ACK_number=0, flags=0, windows=0, data_length=0, checksum=0):
+    def __init__(self, stream_id=0, SYN_number=0, ACK_number=0, flags=0 , windows=0, data_length=0, checksum=0):
         self.stream_id = stream_id
         self.SYN_number = SYN_number
         self.ACK_number = ACK_number
@@ -36,7 +36,7 @@ class Header:
         self.stream_id = header[0:3]
         self.SYN_number = header[4:6]
         self.ACK_number = header[6:8]
-        self.flags = header[8]
+        self.flags = int(header[8])
         self.windows = header[9]
         self.data_length = header[10:12]
         self.checksum = header[12:16]
@@ -52,6 +52,24 @@ class Header:
         checksumless.append(self.data_length)
         checksum = binascii.crc32(checksumless)
         return checksum == self.checksum
+
+    # is_syn checks if the SYN flag is on by bitshifting all the other bits away (done for efficiency)
+    def is_syn(self) -> bool:
+        flagbuf = self.flags
+        synflag = flagbuf << 7 & 255
+        return bool(synflag)
+
+    def is_ack(self) -> bool:
+        flagbuf = self.flags
+        flagbuf = flagbuf >> 1
+        ackflag = flagbuf << 7 & 255
+        return bool(ackflag)
+
+    def is_fin(self) -> bool:
+        flagbuf = self.flags
+        flagbuf = flagbuf >> 2
+        finflag = flagbuf << 7 & 255
+        return bool(finflag)
 
 
 def new_header(header: bytes) -> Header:
