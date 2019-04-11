@@ -22,13 +22,12 @@ SYNACK = 1
 NORMAL = 2
 FINACK = 3
 
+
 # Server is the server, it inherits from bTCP, which implements basic bTCP functions
 class Server(object):
 
     def __init__(self, baseTCP: bTCP.bTCP.BasebTCP):
         self.base = baseTCP
-
-
 
     # listen to the socket
     def listen(self):
@@ -38,9 +37,15 @@ class Server(object):
             packet.unpack(data)
             self.base.handle(packet)
             self.base.checksent()
+            for id, con in self.base.cons:
+                self.reassemble(id)
 
     def reassemble(self, stream_id):
         cur_syn = self.base.cur_syn_numbers[stream_id]
+        next_packet = self.base.get_next_packet(stream_id, cur_syn)
+        if next_packet is not bTCP.bTCP.NOT_RECV:
+            cur_syn += 1
+            # write to the correct file
 
 
 
