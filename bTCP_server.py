@@ -1,6 +1,8 @@
+#!/usr/bin/env python3
+
 import socket
 import argparse
-import bTCP.bTCP
+import bTCP.bTCPbase
 import bTCP.packet
 
 # Handle arguments
@@ -26,7 +28,7 @@ FINACK = 3
 # Server is the server, it inherits from bTCP, which implements basic bTCP functions
 class Server(object):
 
-    def __init__(self, baseTCP: bTCP.bTCP.BasebTCP):
+    def __init__(self, baseTCP: bTCP.bTCPbase.BasebTCP):
         self.base = baseTCP
 
     # listen to the socket
@@ -43,7 +45,7 @@ class Server(object):
     def reassemble(self, stream_id):
         cur_syn = self.base.cur_syn_numbers[stream_id]
         next_packet = self.base.get_next_packet(stream_id, cur_syn)
-        if next_packet is not bTCP.bTCP.NOT_RECV:
+        if next_packet is not bTCP.bTCPbase.NOT_RECV:
             cur_syn += 1
             # write to the correct file
 

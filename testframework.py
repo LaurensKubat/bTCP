@@ -21,7 +21,8 @@ def run_command_with_output(command, input=None, cwd=None, shell=True):
         print("problem running command : \n   ", str(command))
 
     [stdoutdata, stderrdata] = process.communicate(
-        input)  # no pipes set for stdin/stdout/stdout streams so does effectively only just wait for process ends  (same as process.wait()
+        input)  # no pipes set for stdin/stdout/stdout streams so does effectively only
+                # just wait for process ends  (same as process.wait()
 
     if process.returncode:
         print(stderrdata)

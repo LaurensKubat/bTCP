@@ -1,6 +1,8 @@
-import socket, argparse, random
+#!/usr/bin/env python3
+
+import socket, argparse
 from struct import *
-import bTCP.bTCP
+from bTCP import bTCPbase
 
 # Handle arguments
 parser = argparse.ArgumentParser()
@@ -14,7 +16,7 @@ destination_port = 9001
 
 # bTCP header
 header_format = "I"
-bTCP_header = pack(header_format, randint(0,100))
+bTCP_header = pack(header_format, 1)
 bTCP_payload = ""
 udp_payload = bTCP_header
 
@@ -29,7 +31,7 @@ sock.sendto(udp_payload, (destination_ip, destination_port))
 class Client(object):
 
     def __init__(self, port, ip, window, timeout, output, cons: dict, sent: dict):
-        self.base = bTCP.bTCP.BasebTCP(port, ip, window, timeout, output, cons, sent)
+        self.base = bTCPbase.BasebTCP(port, ip, window, timeout, output, cons, sent)
         self.cur_syn = 0
         self.min_window = 0
         self.max_window = 0
