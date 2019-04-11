@@ -1,7 +1,7 @@
 import socket
 import argparse
+import bTCP.bTCP
 import bTCP.packet
-import time
 
 # Handle arguments
 parser = argparse.ArgumentParser()
@@ -22,98 +22,28 @@ SYNACK = 1
 NORMAL = 2
 FINACK = 3
 
-# Server is the server
-class Server:
+# Server is the server, it inherits from bTCP, which implements basic bTCP functions
+class Server(object):
 
-    def __init__(self, port, ip, window, timeout, output, cons: dict, sent: dict):
-        self.port = port
-        self.ip = ip
-        self.window = window
-        self.timeout = timeout
-        self.output = output
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # UDP
-        self.sock = sock
-        self.sock.bind((server_ip, server_port))
-        # cons is a dict containing dicts for each connection. The second level dictionary contains
-        # WINDOW SIZE amount of packages
-        self.cons = cons
-        self.sent = sent
+    def __init__(self, baseTCP: bTCP.bTCP.BasebTCP):
+        self.base = baseTCP
 
+
+
+    # listen to the socket
     def listen(self):
         while True:
             packet = bTCP.packet.Packet()
-            data, addr = self.sock.recvfrom(1016)
+            data, addr = self.base.sock.recvfrom(1016)
             packet.unpack(data)
-            self.handle(packet)
-            self.checksent()
+            self.base.handle(packet)
+            self.base.checksent()
+
+    def reassemble(self, stream_id):
+        cur_syn = self.base.cur_syn_numbers[stream_id]
 
 
-    # handle the packet based on the flags of the header packet
-    # TODO add handling of FIN, ADD a conn to the cons dict if msg is SYN. Add to correct conn dict
-    def handle(self, packet: bTCP.packet.Packet):
-        ok = packet.validate()
-        if not ok:
-            # for now, we ignore any packets and wait for the client to resend them
-            self.send_nack(packet)
-        elif packet.is_syn() and packet.is_ack():
-            self.send_ack(packet)
-        elif packet.is_syn() and not packet.is_ack():
-            self.send_synack(packet)
-            self.cons[packet.header.stream_id] = {packet.header.SYN_number: packet}
-        elif packet.is_ack():
-            self.handle_ack(packet)
-        elif packet.header.is_fin():
-            self.handle_fin(packet)
-        else:
-            # if the connection isn't established yet, ignore the packet
-            if packet.header.stream_id not in self.cons:
-                return
-            # add the packet to the correct window
-            if packet.header.SYN_number not in self.cons[packet.header.stream_id]:
-                self.cons[packet.header.stream_id].update({packet.header.SYN_number: packet})
 
-    # handle a received ACK
-    def handle_ack(self, packet: bTCP.packet.Packet):
-        # if the ACK SYN_number is not in our dictionary of sent messages, we ignore the ACK
-        if packet.header.SYN_number not in self.sent:
-            return
-        # if the ACK SYN_number is in our dict of sent messages, we remove the the ACK SYN_number from our
-        # dict
-        self.sent.pop(packet.header.SYN_number)
 
-    def send_synack(self, packet: bTCP.packet.Packet):
-        tosend = bTCP.packet.Packet()
-        tosend.header.stream_id = packet.header.stream_id
-        tosend.header.SYN_number = packet.header.SYN_number + 1
-        self.sent[tosend.header.SYN_number] = (tosend, SYNACK, time.time())
-        self.sock.send(tosend.pack())
-
-    # TODO decide what to do when the checksum is not correct. Ignore the message or implement some sort of
-    #  NACK to be more error resilient?
-    def send_nack(self, packet: bTCP.packet.Packet):
-        return
-
-    # send an ack message based on the received packet
-    def send_ack(self, packet: bTCP.packet.Packet):
-        tosend = bTCP.packet.Packet()
-        tosend.header.stream_id = packet.header.stream_id
-        tosend.header.SYN_number = packet.header.SYN_number
-        self.sock.send(tosend.pack())
-
-    # handle a received fin message
-    def handle_fin(self, packet: bTCP.packet.Packet):
-        tosend = bTCP.packet.Packet()
-        tosend.header.stream_id = packet.header.stream_id
-        tosend.header.ACK_number = packet.header.SYN_number
-        self.sent[(packet.header.SYN_number, packet.header.stream_id)] = (tosend, FINACK, time.time())
-        self.sock.send(tosend.pack())
-
-    # check whether any sent messages are lost
-    def checksent(self):
-        for key, value in self.sent:
-            packet, packtype, time = value
-            elapsed =  time.time() - time
-            if elapsed > timeout:
-                self.sock.send(packet.pack())
 
 
