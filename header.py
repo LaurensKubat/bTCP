@@ -54,6 +54,7 @@ class Header:
         return checksum == self.checksum
 
     # is_syn checks if the SYN flag is on by bitshifting all the other bits away (done for efficiency)
+    # the first bit is SYN, second is ACK third is FIN
     def is_syn(self) -> bool:
         flagbuf = self.flags
         synflag = flagbuf << 7 & 255
@@ -76,3 +77,15 @@ def new_header(header: bytes) -> Header:
     buf = Header()
     buf.deserialize(header)
     return buf
+
+
+def set_syn(flag: int) -> int:
+    return flag | 1
+
+
+def set_ack(flag: int) -> int:
+    return flag | 2
+
+
+def set_fin(flag: int) -> int:
+    return flag | 4
