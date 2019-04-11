@@ -4,6 +4,7 @@ import bTCP.packet
 import time
 import bTCP.header
 
+NOT_RECV = "not received"
 
 class BasebTCP(object):
 
@@ -60,6 +61,7 @@ class BasebTCP(object):
         # dict
         self.sent.pop(packet.header)
 
+    # TODO set the correct window
     def send_syn_ack(self, packet: bTCP.packet.Packet):
         tosend = bTCP.packet.Packet()
         tosend.header.stream_id = packet.header.stream_id
@@ -94,11 +96,18 @@ class BasebTCP(object):
     # check whether any sent messages are lost
     def checksent(self):
         for key, value in self.sent:
-            packet, packtype, time = value
-            elapsed =  time.time() - time
+            packet, senttime = value
+            elapsed = time.time() - senttime
             if elapsed > self.timeout:
                 self.send(packet)
 
     def send(self, packet: bTCP.packet.Packet):
         self.sock.send(packet.pack())
         self.sent[packet.header] = (packet, time.time())
+
+    # get_next_packet returns the packet following syn_number from stream_id (from the received packets)
+    def get_next_packet(self, stream_id, syn_number):
+        pack = self.cons[stream_id].get(syn_number + 1, NOT_RECV)
+        if pack is not NOT_RECV:
+            self.cons[stream_id].pop(syn_number + 1)
+        return pack
