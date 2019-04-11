@@ -1,5 +1,6 @@
 import socket, argparse, random
 from struct import *
+import bTCP.bTCP
 
 # Handle arguments
 parser = argparse.ArgumentParser()
@@ -23,8 +24,12 @@ sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 # send payload
 sock.sendto(udp_payload, (destination_ip, destination_port))
 
-class Client:
 
-    def __init__(self, dest_ip, port):
-        self.dest_ip = dest_ip
-        self.port = port
+# TODO add fragmenting of a file, keeping track of the window and sending messages according to the window.
+class Client(object):
+
+    def __init__(self, port, ip, window, timeout, output, cons: dict, sent: dict):
+        self.base = bTCP.bTCP.BasebTCP(port, ip, window, timeout, output, cons, sent)
+        self.cur_syn = 0
+        self.min_window = 0
+        self.max_window = 0
