@@ -8,7 +8,6 @@ class Header:
         self.stream_id = stream_id
         self.SYN_number = SYN_number
         self.ACK_number = ACK_number
-        #TODO change flags to a more accesible thing(class maybe)
         self.flags = flags
         self.windows = windows
         self.data_length = data_length
