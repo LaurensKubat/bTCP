@@ -74,6 +74,7 @@ def new_header(header: bytes) -> Header:
     return buf
 
 
+# Todo improve setting of flags, perhaps through pointers
 def set_syn(flag: int) -> int:
     return flag | 1
 

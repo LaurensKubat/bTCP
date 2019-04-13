@@ -39,6 +39,29 @@ class HeaderTestCase(unittest.TestCase):
         self.header.genchecksum()  # helper function
         self.assertTrue(self.header.validate())
 
+    # for the testing of the flags, the initial header does not have any set flags, thus it should be false at
+    # first and after setting a flag, only that specific flag should be true
+    def test_syn_flag(self):
+        self.assertFalse(self.header.is_syn())
+        self.header.flags = set_syn(self.header.flags)
+        self.assertTrue(self.header.is_syn())
+        self.assertFalse(self.header.is_ack())
+        self.assertFalse(self.header.is_fin())
+
+    def test_ack_flag(self):
+        self.assertFalse(self.header.is_ack())
+        self.header.flags = set_ack(self.header.flags)
+        self.assertTrue(self.header.is_ack())
+        self.assertFalse(self.header.is_syn())
+        self.assertFalse(self.header.is_fin())
+
+    def test_fin_flag(self):
+        self.assertFalse(self.header.is_fin())
+        self.header.flags = set_fin(self.header.flags)
+        self.assertTrue(self.header.is_fin())
+        self.assertFalse(self.header.is_syn())
+        self.assertFalse(self.header.is_ack())
+
 
 if __name__ == '__main__':
     unittest.main()
