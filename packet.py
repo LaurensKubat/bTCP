@@ -9,16 +9,19 @@ class Packet:
         self.header = header
         self.data = data
 
+    # TODO check that the length of the data packet is the same as the data length header field
     def validate(self) -> bool:
         correct = True
         correct & self.header.validate()
 
         return correct
 
+    # TODO evaluate whether there should be some runtime evaluation
     def unpack(self, pack: bytes):
         self.header = bTCP.header.new_header(pack[0:16])
         self.data = pack[16:]
 
+    # TODO check if this needs to use struct
     def pack(self) -> bytes:
         data = bytearray(self.header.serialize())
         data.append(self.data)
