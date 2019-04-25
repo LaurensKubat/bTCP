@@ -115,8 +115,9 @@ class BasebTCP(object):
             if elapsed > self.timeout:
                 self.send(packet)
 
-    def send(self, packet: Packet):
-        self.sock.send(packet.pack())
+    # TODO include port and ip in the use of send
+    def send(self, packet: Packet, port, ip):
+        self.sock.sendto(packet.pack(), (port, ip))
         self.sent[packet.header] = (packet, time.time())
 
     # get_next_packet returns the packet following syn_number from stream_id (from the received packets)
