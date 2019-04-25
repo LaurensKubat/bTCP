@@ -11,7 +11,7 @@ class HeaderTestCase(unittest.TestCase):
         self.header = Header(1, 1, 1, 0, 0, 0)
 
     def tearDown(self) -> None:
-        self.header = Header(1, 1, 1, 0, 0, 0)
+        self.header = None
 
     def test_checksum(self):
         checksum = 917831061
