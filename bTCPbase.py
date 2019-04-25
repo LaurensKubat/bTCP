@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 
 import socket
-from bTCP import header
-from bTCP import packet
+from bTCP.header import *
+from bTCP.packet import *
 import time
 
 
 NOT_RECV = "not received"
-
+INIT_SYN = 1
 
 class BasebTCP(object):
 
@@ -29,7 +29,7 @@ class BasebTCP(object):
 
     # handle the packet based on the flags of the header packet
     # TODO add handling of FIN
-    def handle(self, packet: packet.Packet):
+    def handle(self, packet: Packet):
         ok = packet.validate()
         if not ok:
             # for now, we ignore any packets and wait for the client to resend them
@@ -56,7 +56,7 @@ class BasebTCP(object):
                 self.cons[packet.header.stream_id].update({packet.header.SYN_number: packet})
 
     # handle a received ACK
-    def handle_ack(self, packet: packet.Packet):
+    def handle_ack(self, packet: Packet):
         # if the ACK SYN_number is not in our dictionary of sent messages, we ignore the ACK
         if packet.header.SYN_number not in self.sent:
             return
@@ -65,36 +65,47 @@ class BasebTCP(object):
         self.sent.pop(packet.header)
 
     # TODO set the correct window
-    def send_syn_ack(self, packet: packet.Packet):
-        tosend = packet.Packet()
+    def send_syn_ack(self, packet: Packet):
+        tosend = Packet()
         tosend.header.stream_id = packet.header.stream_id
         tosend.header.SYN_number = packet.header.SYN_number + 1
-        tosend.header.flags = header.set_syn(tosend.header.flags)
-        tosend.header.flags = header.set_ack(tosend.header.flags)
+        tosend.header.flags = set_syn(tosend.header.flags)
+        tosend.header.flags = set_ack(tosend.header.flags)
         self.send(tosend)
 
     # TODO decide what to do when the checksum is not correct. Ignore the message or implement some sort of
     #  NACK to be more error resilient?
-    def send_nack(self, packet: packet.Packet):
+    def send_nack(self, packet: Packet):
         return
 
     # send an ack message based on the received packet, acks are not saved in the sent dict.
-    def send_ack(self, packet: packet.Packet):
-        tosend = packet.Packet()
+    def send_ack(self, packet: Packet):
+        tosend = Packet()
         tosend.header.stream_id = packet.header.stream_id
         tosend.header.SYN_number = packet.header.SYN_number
         tosend.header.ACK_number = tosend.header.SYN_number
-        tosend.header.flags = header.set_ack(tosend.header.flags)
+        tosend.header.flags = set_ack(tosend.header.flags)
         self.sock.send(tosend.pack())
 
     # handle a received fin message
-    def handle_fin(self, packet: packet.Packet):
-        tosend = packet.Packet()
-        tosend.header.stream_id = packet.header.stream_id
-        tosend.header.ACK_number = packet.header.SYN_number
-        tosend.header.flags = header.set_fin(tosend.header.flags)
-        tosend.header.flags = header.set_ack(tosend.header.flags)
-        self.send(tosend)
+    # if all the syn numbers are consecutive,
+    def handle_fin(self, packet: Packet):
+        if self.checksynnums(packet.header.stream_id, packet.header.SYN_number):
+            tosend = Packet(data=b"")
+            tosend.header.stream_id = packet.header.stream_id
+            tosend.header.ACK_number = packet.header.SYN_number
+            tosend.header.flags = set_fin(tosend.header.flags)
+            tosend.header.flags = set_ack(tosend.header.flags)
+            self.send(tosend)
+
+    # check if we are missing any packages by checking that all the syn numbers are consecutive
+    # this might fail due to the way a connections is initiated.
+    def checksynnums(self, stream_id, fin_syn_num: int) -> bool:
+        cur_syn = INIT_SYN
+        while cur_syn in self.cons[stream_id]:
+            cur_syn += 1
+        return cur_syn == fin_syn_num
+
 
     # check whether any sent messages are lost
     def checksent(self):
@@ -104,7 +115,7 @@ class BasebTCP(object):
             if elapsed > self.timeout:
                 self.send(packet)
 
-    def send(self, packet: packet.Packet):
+    def send(self, packet: Packet):
         self.sock.send(packet.pack())
         self.sent[packet.header] = (packet, time.time())
 
