@@ -43,6 +43,8 @@ class Server(object):
                 self.reassemble(id)
 
     def reassemble(self, stream_id):
+        if self.base.checksynnums(stream_id, self.base.port, self.base.ip):
+
         cur_syn = self.base.cur_syn_numbers[stream_id]
         next_packet = self.base.get_next_packet(stream_id, cur_syn)
         if next_packet is not bTCP.bTCPbase.NOT_RECV:
