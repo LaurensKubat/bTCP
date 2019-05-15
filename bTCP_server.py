@@ -2,7 +2,7 @@
 
 import socket
 import argparse
-import bTCP.bTCPbase
+import bTCP.bTCPbaseRefactor
 import bTCP.packet
 
 # Handle arguments
@@ -28,31 +28,32 @@ FINACK = 3
 # Server is the server, it inherits from bTCP, which implements basic bTCP functions
 class Server(object):
 
-    def __init__(self, baseTCP: bTCP.bTCPbase.BasebTCP):
-        self.base = baseTCP
+    def __init__(self, output: str, base: bTCP.bTCPbaseRefactor.BasebTCP):
+        self.base = base
+        self.output = output
 
     # listen to the socket
     def listen(self):
         while True:
-            packet = bTCP.packet.Packet()
+            packet = bTCP.packet.Packet(b"")
             data, addr = self.base.sock.recvfrom(1016)
             packet.unpack(data)
             self.base.handle(packet)
-            self.base.checksent()
-            for id, con in self.base.cons:
-                self.reassemble(id)
+            self.base.check_sent()
+            highest_syn = max(self.base.received)
+            self.reassemble(highest_syn)
 
-    def reassemble(self, stream_id):
-        if self.base.checksynnums(stream_id, self.base.port, self.base.ip):
-
-        cur_syn = self.base.cur_syn_numbers[stream_id]
-        next_packet = self.base.get_next_packet(stream_id, cur_syn)
-        if next_packet is not bTCP.bTCPbase.NOT_RECV:
-            cur_syn += 1
-            # write to the correct file
-
-
-
-
-
-
+    def reassemble(self, cur_syn_num: int):
+        if self.base.check_syn_nums(cur_syn_num):
+            # open the output file
+            f = open(self.output, "ab+")
+            for i in range(cur_syn_num):
+                # get packet i from received
+                pkt = self.base.received[i]
+                # write the contents of the packet to the file
+                for j in range(pkt.header.data_length):
+                    f.write(pkt.data[i])
+                # remove the packet from the buffer
+                self.base.received.pop(i)
+            # close output file
+            f.close()
