@@ -9,6 +9,8 @@ intf = "lo"
 netem_add = "sudo tc qdisc add dev {} root netem".format(intf)
 netem_change = "sudo tc qdisc change dev {} root netem {}".format(intf, "{}")
 netem_del = "sudo tc qdisc del dev {} root netem".format(intf)
+start_server = "sudo python3 bTCP_server.py"
+start_client_and_send_file = "sudo python3 bTCP_client.py"
 
 """run command and retrieve output"""
 
@@ -72,8 +74,10 @@ class TestbTCPFramework(unittest.TestCase):
         # setup environment (nothing to set)
 
         # launch localhost client connecting to server
+        run_command(start_server)
 
         # client sends content to server
+        run_command(start_client_and_send_file)
 
         # server receives content from client
 
