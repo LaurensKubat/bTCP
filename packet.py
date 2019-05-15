@@ -9,12 +9,10 @@ class Packet:
         self.header = header
         self.data = data
 
-    # TODO check that the length of the data packet is the same as the data length header field
     def validate(self) -> bool:
         correct = (len(self.data) == self.header.data_length)
         return correct and self.header.validate()
 
-    # TODO evaluate whether there should be some runtime evaluation
     def unpack(self, pack: bytes):
         self.header = new_header(pack[0:16])
         self.data = pack[16:]
@@ -24,6 +22,9 @@ class Packet:
         buf = b""
         buf += self.header.serialize()
         buf += self.data
+        # pad the packet if needed
+        if self.header.data_length < 1000:
+            buf += b'0' * (1000 - self.header.data_length)
         return buf
 
     # is_'flag' functions are not tested in the unittests since they are tested in the header functions
