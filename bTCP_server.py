@@ -17,7 +17,7 @@ timeout = 100
 server_ip = "127.0.0.1"
 server_port = 9001
 
-# Define a header format
+# Define a header format.
 header_format = "I"
 
 SYNACK = 1
@@ -25,14 +25,14 @@ NORMAL = 2
 FINACK = 3
 
 
-# Server is the server, it inherits from bTCP, which implements basic bTCP functions
+# Server is the server, it decorates with bTCPBase, which implements basic bTCP functions.
 class Server(object):
 
     def __init__(self, output: str, base: bTCP.bTCPbaseRefactor.BasebTCP):
         self.base = base
         self.output = output
 
-    # listen to the socket
+    # listen to the socket.
     def listen(self):
         while True:
             packet = bTCP.packet.Packet(b"")
@@ -48,12 +48,12 @@ class Server(object):
             # open the output file
             f = open(self.output, "ab+")
             for i in range(cur_syn_num):
-                # get packet i from received
+                # get packet i from received.
                 pkt = self.base.received[i]
-                # write the contents of the packet to the file
+                # write the contents of the packet to the file, we keep possible padding in mind.
                 for j in range(pkt.header.data_length):
                     f.write(pkt.data[i])
-                # remove the packet from the buffer
+                # remove the packet from the buffer.
                 self.base.received.pop(i)
-            # close output file
+            # close output file.
             f.close()
