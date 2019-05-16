@@ -28,6 +28,7 @@ class BasebTCP(object):
         self.dest_port = dest_port
         self.dest_ip = dest_ip
         self.cur_stream_id = 0
+        self.syn_ack = 0
         self.connected = False
 
     # handle the packet based on the flags of the header packet
@@ -39,6 +40,7 @@ class BasebTCP(object):
             # if we receive a syn ack, we ack this and set the window to the given window
         elif packet.is_syn() and packet.is_ack() and packet.header.stream_id == self.cur_stream_id:
             self.window_size = packet.header.windows
+            self.syn_ack = packet.header.SYN_number + 1
             self.send_ack(packet)
 
         # if we receive a SYN packet, and we are not connected, we set all setting and ack the syn
@@ -81,9 +83,9 @@ class BasebTCP(object):
         tosend.header.flags = set_ack(tosend.header.flags)
         self.send(tosend)
 
-    def send_syn(self):
+    def send_syn(self, stream_id, windows,):
         tosend = Packet(data=b"")
-        tosend.header.stream_id = self.port
+        tosend.header.stream_id = stream_id
         tosend.header.SYN_number = INIT_SYN
         tosend.header.flags = set_syn(tosend.header.flags)
         self.send(tosend)
@@ -93,7 +95,10 @@ class BasebTCP(object):
         tosend = Packet(data=b"")
         tosend.header.stream_id = packet.header.stream_id
         tosend.header.SYN_number = packet.header.SYN_number + 1
-        tosend.header.windows = self.window_size
+        if packet.header.windows >= self.window_size:
+            tosend.header.windows = self.window_size
+        else:
+            tosend.header.windows = packet.header.windows
         tosend.header.flags = set_syn(tosend.header.flags)
         tosend.header.flags = set_ack(tosend.header.flags)
         self.send(tosend)
@@ -116,6 +121,15 @@ class BasebTCP(object):
             self.cur_stream_id = 0
             self.connected = False
 
+    def send_fin(self, syn_number):
+        tosend = Packet(data=b"")
+        tosend.header.stream_id = self.cur_stream_id
+        tosend.header.SYN_number = syn_number
+        tosend.header.windows = self.window_size
+        tosend.header.data_length = 0
+        tosend.header.flags = set_fin(tosend.header.flags)
+        self.send(tosend)
+
     def send_fin_ack(self, packet: Packet):
         tosend = Packet(data=b"")
         tosend.header.stream_id = packet.header.stream_id
@@ -136,11 +150,12 @@ class BasebTCP(object):
 
     def check_sent(self):
         for pkt_id in self.sent:
-            packet, senttime = self.sent[pkt_id]
+            packet, sent_time = self.sent[pkt_id]
             # if more than 5 seconds have elapsed since the packet is sent
-            if time.time() - senttime > 5:
+            if time.time() - sent_time > 5:
                 self.send(packet)
 
     def send(self, packet: Packet):
         packet.header.genchecksum()
+        self.sent.update({packet.header.SYN_number, packet})
         self.sock.sendto(packet.pack(), (self.dest_ip, self.dest_port))
