@@ -1,0 +1,30 @@
+During the initial planning phase, made two choices which strongly dictated the structure of my implementation.
+Firstly, I decided not to multithread my application. This was mostly due to the fact that the handling of an
+incoming message exists out of gets and puts, and I figured that the cost spinning up a new Python VM of keeping a
+second python VM running would not outweigh the benefits.
+
+Secondly, I decided to include most basic TCP functionality in a 'base' class which would be used using the
+decorator pattern. This class would then be used by a client and a server in order to communicate.
+
+After this, I came to the window, in this case, I decided on a sliding window which starts at the lowest acked
+packages and continues for the next 99 packets. Thus if packet 50 is lost, but 1 through 49 are acked, the next
+window would be 50 - 150, where packets 50 - 100 are send twice in total.
+
+My flags are structured as follows, we have one byte for three flags. I used the rightmost three bytes for the
+flags.
+
+  0  1  2  3  4  5  6  7  8
+|--------------------------|
+| x  x  x  x  x  x  F  A  S|
+|--------------------------|
+
+Where F is the fin flag, A the ack flag and S the syn flag.
+
+To ease working with the headers and the packet itself, I wrote the header and packet class. Using these packets,
+I try to 'hide' lower level actions, such as setting the correct bit's in the flags. This way, i can use the
+functions such as is_ack() and set_ack() instead of have some bitshifts or evaluating integers as bools in the
+middle of my TCP base, but still have some of the efficiency of these actions. These packets also include functions
+for packing and unpacking.
+
+Looking Back:
+The main reason to split up the client and t
