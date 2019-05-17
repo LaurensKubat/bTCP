@@ -55,12 +55,14 @@ class Header:
         syn_flag = flag_buf << 7 & 255
         return bool(syn_flag)
 
+    # is_ack checks if the ACK flag is set
     def is_ack(self) -> bool:
         flag_buf = self.flags
         flag_buf = flag_buf >> 1
         ack_flag = flag_buf << 7 & 255
         return bool(ack_flag)
 
+    # is_fin checks if the FIN flag is set
     def is_fin(self) -> bool:
         flag_buf = self.flags
         flag_buf = flag_buf >> 2
@@ -68,13 +70,6 @@ class Header:
         return bool(fin_flag)
 
 
-def new_header(header: bytes) -> Header:
-    buf = Header()
-    buf.deserialize(header)
-    return buf
-
-
-# Todo improve setting of flags, perhaps through pointers
 def set_syn(flag: int) -> int:
     return flag | 1
 

@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import socket
-from bTCP.header import *
 from bTCP.packet import *
 import time
 
@@ -11,13 +10,12 @@ INIT_SYN = 1
 
 class BasebTCP(object):
 
-    def __init__(self, own_port: int, own_ip: int, timeout: int, output: str,
+    def __init__(self, own_port: int, own_ip, timeout: int,
                  window_size=100, dest_port=0, dest_ip=0):
         self.port = own_port
         self.ip = own_ip
         self.packets = dict
         self.timeout = timeout
-        self.output = output
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # UDP
         self.sock = sock
         self.sock.bind((own_ip, own_port))
@@ -36,15 +34,18 @@ class BasebTCP(object):
         ok = packet.validate()
         if not ok:
             # for now, we ignore any packets and wait for the client to resend them
+            print("not ok")
             self.send_nack(packet)
             # if we receive a syn ack, we ack this and set the window to the given window
         elif packet.is_syn() and packet.is_ack() and packet.header.stream_id == self.cur_stream_id:
+            print("got syn ack over known conn")
             self.window_size = packet.header.windows
             self.syn_ack = packet.header.SYN_number + 1
             self.send_ack(packet)
 
         # if we receive a SYN packet, and we are not connected, we set all setting and ack the syn
         elif packet.is_syn() and not packet.is_ack() and not self.connected:
+            print("handling syn")
             self.cur_stream_id = packet.header.stream_id
             self.connected = True
             self.send_syn_ack(packet)
@@ -52,25 +53,35 @@ class BasebTCP(object):
         # handle the ack
         elif (packet.is_ack() and not packet.is_fin() and packet.header.stream_id == self.cur_stream_id) \
                 or ((packet.header.stream_id, packet.header.ACK_number) in self.sent):
+            print("received ack")
             self.handle_ack(packet)
+
         elif packet.header.is_fin() and not packet.is_ack() and packet.header.stream_id == self.cur_stream_id:
+            print("god knows why i am here")
             self.handle_fin(packet)
         elif packet.header.is_fin() and packet.is_ack() and packet.header.stream_id == self.cur_stream_id:
+            print("fuck me mate")
             self.send_ack(packet=packet)
             self.cur_stream_id = 0
             self.connected = False
-
         else:
+            print("reached else")
+
             # if the connection isn't established yet, ignore the packet
             if not self.connected:
+                print("not connected")
                 return
             # if we receive a package from a different stream, we ignore it
-            if packet.header.stream_id is not self.cur_stream_id:
+            if not packet.header.stream_id == self.cur_stream_id:
+                print(packet.header.stream_id)
+                print(self.cur_stream_id)
+                print("received unknown packet")
                 return
             # add the packet to the correct window, if the packet is not received yet
             if packet.header.SYN_number not in self.received:
+                print("acking" + str(packet.header.SYN_number))
                 self.send_ack(packet)
-                self.received.update({packet.header.SYN_number, packet})
+                self.received.update({packet.header.SYN_number: packet})
 
     def send_nack(self, packet: Packet):
         return
@@ -80,6 +91,9 @@ class BasebTCP(object):
         tosend.header.stream_id = packet.header.stream_id
         tosend.header.SYN_number = packet.header.SYN_number
         tosend.header.ACK_number = tosend.header.SYN_number
+        # reset the flags of the packet we are acking, if we want to send a syn_Ack of fin_ack we need to use
+        # the dedicated functions.
+        packet.header.flags = 0
         tosend.header.flags = set_ack(tosend.header.flags)
         self.send(tosend)
 
@@ -99,8 +113,9 @@ class BasebTCP(object):
             tosend.header.windows = self.window_size
         else:
             tosend.header.windows = packet.header.windows
-        tosend.header.flags = set_syn(tosend.header.flags)
+        tosend.header.flags = 0
         tosend.header.flags = set_ack(tosend.header.flags)
+        print("sending syn_ack")
         self.send(tosend)
 
     def handle_ack(self, packet: Packet):
@@ -109,7 +124,7 @@ class BasebTCP(object):
             return
         # if the ACK SYN_number is in our dict of sent messages, we remove the the ACK SYN_number from our
         # dict
-        self.sent.pop(packet.header)
+        self.sent.pop(packet.header.ACK_number)
 
         # handle a received fin message
         # if all the syn numbers are consecutive,
@@ -143,7 +158,7 @@ class BasebTCP(object):
     def check_syn_nums(self, fin_syn_num: int) -> bool:
         pkt = INIT_SYN
         while pkt < fin_syn_num:
-            packet = self.received[pkt]
+            packet = self.received.get(pkt, None)
             if packet is None:
                 return False
         return True
@@ -157,5 +172,5 @@ class BasebTCP(object):
 
     def send(self, packet: Packet):
         packet.header.genchecksum()
-        self.sent.update({packet.header.SYN_number, packet})
+        self.sent.update({packet.header.SYN_number: (packet, time.time())})
         self.sock.sendto(packet.pack(), (self.dest_ip, self.dest_port))

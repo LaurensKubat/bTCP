@@ -10,8 +10,9 @@ class Packet:
         self.data = data
 
     def validate(self) -> bool:
-        correct = (len(self.data) == self.header.data_length)
-        return correct and self.header.validate()
+        # correct = (len(self.data) == self.header.data_length)
+        # removed validation of the data length since i decided to pad the messages
+        return self.header.validate()
 
     def unpack(self, pack: bytes):
         self.header = new_header(pack[0:16])

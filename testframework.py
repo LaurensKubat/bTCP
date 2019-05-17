@@ -2,6 +2,8 @@ import unittest
 import socket
 import time
 import sys
+from bTCP.bTCP_server import *
+from bTCP.bTCP_client import *
 
 timeout = 100
 winsize = 100
@@ -50,6 +52,9 @@ def run_command(command, cwd=None, shell=True):
     if process.returncode:
         print("2. problem running command : \n   ", str(command), " ", process.returncode)
 
+def compare_file_bytewise(input, output) -> bool:
+    return True
+
 
 class TestbTCPFramework(unittest.TestCase):
     """Test cases for bTCP"""
@@ -60,26 +65,28 @@ class TestbTCPFramework(unittest.TestCase):
         run_command(netem_add)
 
         # launch localhost server
-
-
+        self.server = Server("outputtest.txt", BasebTCP(own_port=6543, own_ip="localhost",
+                                                        timeout=timeout, window_size=winsize, dest_port=6542,
+                                                        dest_ip="localhost"))
+        self.client = Client(filename="test.txt", timeout=100,
+                        base=BasebTCP(own_port=6542, own_ip="localhost",
+                                      timeout=timeout, window_size=winsize, dest_port=6543, dest_ip="localhost"))
     def tearDown(self):
         """Clean up after testing"""
-        # clean the environment
+        # clean the environment and close the servers
         run_command(netem_del)
-
-        # close server
+        del self.server
+        del self.client
 
     def test_ideal_network(self):
         """reliability over an ideal framework"""
         # setup environment (nothing to set)
 
         # launch localhost client connecting to server
-        run_command(start_server)
-
         # client sends content to server
         run_command(start_client_and_send_file)
-
         # server receives content from client
+
 
         # content received by server matches the content sent by client
 

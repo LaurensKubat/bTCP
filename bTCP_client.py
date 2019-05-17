@@ -5,28 +5,6 @@ import random
 from struct import *
 from bTCP.bTCPbaseRefactor import *
 
-# Handle arguments
-parser = argparse.ArgumentParser()
-parser.add_argument("-w", "--window", help="Define bTCP window size", type=int, default=100)
-parser.add_argument("-t", "--timeout", help="Define bTCP timeout in milliseconds", type=int, default=100)
-parser.add_argument("-i","--input", help="File to send", default="tmp.file")
-args = parser.parse_args()
-
-destination_ip = "127.0.0.1"
-destination_port = 9001
-
-# bTCP header
-header_format = "I"
-bTCP_header = pack(header_format, 1)
-bTCP_payload = ""
-udp_payload = bTCP_header
-
-# UDP socket which will transport your bTCP packets
-sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-
-# send payload
-sock.sendto(udp_payload, (destination_ip, destination_port))
-
 
 class Client(object):
 
@@ -43,21 +21,24 @@ class Client(object):
         self.create_packets()
         self.send_syn()
         # we try to connect, wait for the timeout period, if we received nothing, we resend the syn with check_sent()
-        time.sleep(self.timeout)
         while True:
             try:
                 data, addr = self.base.sock.recvfrom(1016)
                 pkt = Packet(b"")
                 pkt.unpack(data)
                 self.base.handle(pkt)
+                print("received syn response")
                 break
             except socket.error:
                 self.base.check_sent()
         # send the packets if to_send is not empty
-        while not self.to_send:
+        print("starting file transfer")
+        while self.to_send:
+            print(len(self.to_send))
             self.send_packets()
             wait = time.time()
             # recv from socket until timeout is reached, after we resend packets
+            # TODO change this timeout wait to a spinning wait
             while time.time() - wait < self.timeout:
                 try:
                     data, addr = self.base.sock.recvfrom(1016)
@@ -67,19 +48,31 @@ class Client(object):
                 except socket.error:
                     pass
         # we close the connection
+        print("sending fin")
         self.send_fin()
+        print("starting to wait for fin_ack")
+        while True:
+            try:
+                data, addr = self.base.sock.recvfrom(1016)
+                pkt = Packet(b"")
+                pkt.unpack(data)
+                self.base.handle(pkt)
+                print("received fin_ack response")
+            except socket.error:
+                self.base.check_sent()
 
     def send_packets(self):
         lowest_pkt = min(self.to_send)
         for i in range(lowest_pkt, lowest_pkt + self.base.window_size):
-            pkt = self.to_send[i]
-            pkt.header.SYN_number = self.base.syn_ack + i + 1
-            self.base.send(self.to_send[i])
+            pkt = self.to_send.get(i, None)
+            if pkt is not None:
+                pkt.header.SYN_number = self.base.syn_ack + i + 1
+                self.base.send(self.to_send[i])
 
     def send_syn(self):
         stream_id = random.randint(0, 65535)
         self.base.cur_stream_id = stream_id
-        self.base.window_size = args[0]
+        self.base.window_size = 100
         self.base.send_syn(stream_id, self.base.window_size)
 
     def send_fin(self):
@@ -114,7 +107,15 @@ class Client(object):
             pkt.header.data_length = data_length
             # we save the created packets without header in the format: Packet_number (packet
             # 1 was created first); Packet, is sent, is acked.
-            self.to_send.update({pkt_num, (pkt, False, False)})
+            self.to_send.update({pkt_num: pkt})
             total_packets = total_packets + 1
+        print(total_packets)
+        print(len(self.to_send))
         self.total_packets = total_packets
         f.close()
+
+
+client = Client(filename="test.txt", timeout=100,
+                base=BasebTCP(own_port=6542, own_ip="localhost",
+                              timeout=100, window_size=100, dest_port=6543, dest_ip="localhost"))
+client.send_file()
