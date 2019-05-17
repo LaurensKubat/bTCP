@@ -96,8 +96,8 @@ class BasebTCP(object):
         print("sending ack")
         tosend = Packet(data=b"")
         tosend.header.stream_id = packet.header.stream_id
-        tosend.header.SYN_number = packet.header.SYN_number
         tosend.header.ACK_number = tosend.header.SYN_number
+        tosend.header.SYN_number = 0
         # reset the flags of the packet we are acking, if we want to send a syn_Ack of fin_ack we need to use
         # the dedicated functions.
         tosend.header.flags = 0
@@ -118,6 +118,8 @@ class BasebTCP(object):
         tosend = Packet(data=b"")
         tosend.header.stream_id = packet.header.stream_id
         tosend.header.SYN_number = packet.header.SYN_number + 1
+        print(tosend.header.SYN_number)
+        tosend.header.ACK_number = packet.header.SYN_number
         if packet.header.windows >= self.window_size:
             tosend.header.windows = self.window_size
         else:
@@ -131,10 +133,9 @@ class BasebTCP(object):
 
     def handle_ack(self, packet: Packet):
         # if the ACK SYN_number is not in our dictionary of sent messages, we ignore the ACK
-        if packet.header.SYN_number not in self.sent:
-            return
         # if the ACK SYN_number is in our dict of sent messages, we remove the the ACK SYN_number from our
         # dict
+        print(packet.header.ACK_number)
         self.sent.pop(packet.header.ACK_number)
 
         # handle a received fin message

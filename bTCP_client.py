@@ -17,7 +17,6 @@ class Client(object):
         self.total_packets = 0
 
     def send_file(self):
-        self.create_packets()
         self.send_syn()
         # we try to connect, wait for the timeout period, if we received nothing, we resend the syn with check_sent()
         while True:
@@ -30,9 +29,9 @@ class Client(object):
             except socket.error:
                 self.base.check_sent()
         # send the packets if to_send is not empty
+        self.create_packets()
         print("starting file transfer")
         while self.base.sent:
-            print(len(self.base.sent))
             self.send_packets()
             wait = time.time()
             # recv from socket until timeout is reached, after we resend packets. If all sent messages are acked, we
@@ -66,12 +65,16 @@ class Client(object):
     def send_packets(self):
         lowest_pkt = min(self.base.sent.keys())
         for i in range(lowest_pkt, lowest_pkt + self.base.window_size):
-            (pkt_num, (pkt, time_sent)) = self.base.sent.get(i, (-1, ("a", 2)))
-            if pkt_num is not -1:
+            buf = self.base.sent.get(i, -1)
+            if buf is not -1:
+                pkt, sent_time = buf
+                print(pkt)
                 pkt.header.SYN_number = self.base.syn_ack + i + 1
+                pkt.header.flags = pkt.header.flags & ~2
                 print("start data packets")
                 print(pkt.header.flags)
                 print("end data packets")
+                self.base.sent.pop(i + self.base.syn_ack)
                 self.base.send(pkt)
 
     def send_syn(self):
@@ -99,6 +102,7 @@ class Client(object):
                 pkt.header.data_length = data_length
                 # we save the created packets without header in the format: Packet_number (packet
                 # 1 was created first); Packet, is sent, is acked.
+                print("adding packet with flags: " + str(pkt.header.flags))
                 self.base.sent.update({pkt_num, (pkt, time.time())})
                 total_packets = total_packets + 1
                 pkt_num = pkt_num + 1
@@ -110,10 +114,10 @@ class Client(object):
         if data_length > 0:
             pkt = Packet(data)
             pkt.header.data_length = data_length
-            pkt.header.flags = 0
             # we save the created packets without header in the format: Packet_number (packet
             # 1 was created first); Packet, is sent, is acked.
-            self.base.sent.update({pkt_num: (pkt, time.time())})
+            print("adding packet with flags: " + str(pkt.header.flags))
+            self.base.sent.update({pkt_num + self.base.syn_ack: (pkt, time.time())})
             total_packets = total_packets + 1
         print(total_packets)
         print(len(self.base.sent))
