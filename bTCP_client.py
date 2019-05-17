@@ -11,7 +11,6 @@ class Client(object):
     def __init__(self, filename: str, base: BasebTCP, timeout: int):
         self.base = base
         self.filename = filename
-        self.to_send = {}
         # we set the socket to non blocking
         self.base.sock.setblocking(0)
         self.timeout = timeout
@@ -27,18 +26,17 @@ class Client(object):
                 pkt = Packet(b"")
                 pkt.unpack(data)
                 self.base.handle(pkt)
-                print("received syn response")
                 break
             except socket.error:
                 self.base.check_sent()
         # send the packets if to_send is not empty
         print("starting file transfer")
-        while self.to_send:
-            print(len(self.to_send))
+        while self.base.sent:
+            print(len(self.base.sent))
             self.send_packets()
             wait = time.time()
-            # recv from socket until timeout is reached, after we resend packets
-            # TODO change this timeout wait to a spinning wait
+            # recv from socket until timeout is reached, after we resend packets. If all sent messages are acked, we
+            # continue to send more messages
             while time.time() - wait < self.timeout:
                 try:
                     data, addr = self.base.sock.recvfrom(1016)
@@ -47,27 +45,34 @@ class Client(object):
                     self.base.handle(pkt)
                 except socket.error:
                     pass
+                if not self.base.sent:
+                    break
         # we close the connection
         print("sending fin")
         self.send_fin()
         print("starting to wait for fin_ack")
-        while True:
+        wait = time.time()
+        while time.time() - wait < self.timeout:
             try:
                 data, addr = self.base.sock.recvfrom(1016)
                 pkt = Packet(b"")
                 pkt.unpack(data)
                 self.base.handle(pkt)
                 print("received fin_ack response")
+                break
             except socket.error:
                 self.base.check_sent()
 
     def send_packets(self):
-        lowest_pkt = min(self.to_send)
+        lowest_pkt = min(self.base.sent.keys())
         for i in range(lowest_pkt, lowest_pkt + self.base.window_size):
-            pkt = self.to_send.get(i, None)
-            if pkt is not None:
+            (pkt_num, (pkt, time_sent)) = self.base.sent.get(i, (-1, ("a", 2)))
+            if pkt_num is not -1:
                 pkt.header.SYN_number = self.base.syn_ack + i + 1
-                self.base.send(self.to_send[i])
+                print("start data packets")
+                print(pkt.header.flags)
+                print("end data packets")
+                self.base.send(pkt)
 
     def send_syn(self):
         stream_id = random.randint(0, 65535)
@@ -90,11 +95,11 @@ class Client(object):
             data_length = data_length + 1
             # if we have read byte one thousand, we create a packet
             if data_length == 1000:
-                pkt = Packet(data)
+                pkt = Packet(data=data)
                 pkt.header.data_length = data_length
                 # we save the created packets without header in the format: Packet_number (packet
                 # 1 was created first); Packet, is sent, is acked.
-                self.to_send.update({pkt_num, (pkt, False, False)})
+                self.base.sent.update({pkt_num, (pkt, time.time())})
                 total_packets = total_packets + 1
                 pkt_num = pkt_num + 1
                 data_length = 0
@@ -105,12 +110,13 @@ class Client(object):
         if data_length > 0:
             pkt = Packet(data)
             pkt.header.data_length = data_length
+            pkt.header.flags = 0
             # we save the created packets without header in the format: Packet_number (packet
             # 1 was created first); Packet, is sent, is acked.
-            self.to_send.update({pkt_num: pkt})
+            self.base.sent.update({pkt_num: (pkt, time.time())})
             total_packets = total_packets + 1
         print(total_packets)
-        print(len(self.to_send))
+        print(len(self.base.sent))
         self.total_packets = total_packets
         f.close()
 

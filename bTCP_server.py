@@ -32,7 +32,9 @@ class Server(object):
             f = open(self.output, "ab+")
             for i in range(cur_syn_num):
                 # get packet i from received.
-                pkt = self.base.received[i]
+                pkt = self.base.received.get(i, None)
+                if pkt is None:
+                    continue
                 # write the contents of the packet to the file, we keep possible padding in mind.
                 for j in range(pkt.header.data_length):
                     f.write(pkt.data[i])

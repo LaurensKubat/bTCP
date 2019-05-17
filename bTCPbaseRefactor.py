@@ -39,6 +39,7 @@ class BasebTCP(object):
             # if we receive a syn ack, we ack this and set the window to the given window
         elif packet.is_syn() and packet.is_ack() and packet.header.stream_id == self.cur_stream_id:
             print("got syn ack over known conn")
+            self.connected = True
             self.window_size = packet.header.windows
             self.syn_ack = packet.header.SYN_number + 1
             self.send_ack(packet)
@@ -47,12 +48,13 @@ class BasebTCP(object):
         elif packet.is_syn() and not packet.is_ack() and not self.connected:
             print("handling syn")
             self.cur_stream_id = packet.header.stream_id
+            self.window_size = packet.header.windows
             self.connected = True
             self.send_syn_ack(packet)
         # if the packet is an ack of our current stream or an ack of a sent packet (of a previous conn possibly)
         # handle the ack
-        elif (packet.is_ack() and not packet.is_fin() and packet.header.stream_id == self.cur_stream_id) \
-                or ((packet.header.stream_id, packet.header.ACK_number) in self.sent):
+        elif packet.is_ack() and not packet.is_fin() and not packet.is_syn() and packet.header.stream_id == self.cur_stream_id:
+               # or ((packet.header.stream_id, packet.header.ACK_number) in self.sent):
             print("received ack")
             self.handle_ack(packet)
 
@@ -82,26 +84,33 @@ class BasebTCP(object):
                 print("acking" + str(packet.header.SYN_number))
                 self.send_ack(packet)
                 self.received.update({packet.header.SYN_number: packet})
+            else:
+                print("no if entered!")
+                print(packet.header.flags)
+                print(packet.header.SYN_number)
 
     def send_nack(self, packet: Packet):
         return
 
     def send_ack(self, packet: Packet):
+        print("sending ack")
         tosend = Packet(data=b"")
         tosend.header.stream_id = packet.header.stream_id
         tosend.header.SYN_number = packet.header.SYN_number
         tosend.header.ACK_number = tosend.header.SYN_number
         # reset the flags of the packet we are acking, if we want to send a syn_Ack of fin_ack we need to use
         # the dedicated functions.
-        packet.header.flags = 0
+        tosend.header.flags = 0
         tosend.header.flags = set_ack(tosend.header.flags)
         self.send(tosend)
 
-    def send_syn(self, stream_id, windows,):
+    def send_syn(self, stream_id, windows):
         tosend = Packet(data=b"")
+        tosend.header.windows = windows
         tosend.header.stream_id = stream_id
         tosend.header.SYN_number = INIT_SYN
         tosend.header.flags = set_syn(tosend.header.flags)
+        self.sent.update({tosend.header.SYN_number: (tosend, time.time())})
         self.send(tosend)
 
     def send_syn_ack(self, packet: Packet):
@@ -114,8 +123,10 @@ class BasebTCP(object):
         else:
             tosend.header.windows = packet.header.windows
         tosend.header.flags = 0
+        tosend.header.flags = set_syn(tosend.header.flags)
         tosend.header.flags = set_ack(tosend.header.flags)
         print("sending syn_ack")
+        self.sent.update({tosend.header.SYN_number: (tosend, time.time())})
         self.send(tosend)
 
     def handle_ack(self, packet: Packet):
@@ -143,6 +154,7 @@ class BasebTCP(object):
         tosend.header.windows = self.window_size
         tosend.header.data_length = 0
         tosend.header.flags = set_fin(tosend.header.flags)
+        self.sent.update({tosend.header.SYN_number: (tosend, time.time())})
         self.send(tosend)
 
     def send_fin_ack(self, packet: Packet):
@@ -151,6 +163,7 @@ class BasebTCP(object):
         tosend.header.ACK_number = packet.header.SYN_number
         tosend.header.flags = set_fin(tosend.header.flags)
         tosend.header.flags = set_ack(tosend.header.flags)
+        self.sent.update({tosend.header.SYN_number: (tosend, time.time())})
         self.send(tosend)
 
     # check if we are missing any packages by checking that all the syn numbers are consecutive
@@ -171,6 +184,6 @@ class BasebTCP(object):
                 self.send(packet)
 
     def send(self, packet: Packet):
+        packet.header.stream_id = self.cur_stream_id
         packet.header.genchecksum()
-        self.sent.update({packet.header.SYN_number: (packet, time.time())})
         self.sock.sendto(packet.pack(), (self.dest_ip, self.dest_port))

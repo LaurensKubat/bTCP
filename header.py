@@ -62,12 +62,18 @@ class Header:
         ack_flag = flag_buf << 7 & 255
         return bool(ack_flag)
 
-    # is_fin checks if the FIN flag is set
+    #is_fin checks if the FIN flag is set
     def is_fin(self) -> bool:
         flag_buf = self.flags
         flag_buf = flag_buf >> 2
         fin_flag = flag_buf << 7 & 255
         return bool(fin_flag)
+
+
+def new_header(header: bytes) -> Header:
+    buf = Header()
+    buf.deserialize(header)
+    return buf
 
 
 def set_syn(flag: int) -> int:
