@@ -1,6 +1,6 @@
 import socket
-from bTCP.packet import *
-from bTCP.header import *
+from bTCPfolder.packet import *
+from bTCPfolder.header import *
 from time import *
 import random
 

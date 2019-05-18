@@ -26,15 +26,10 @@ class Header:
 
     # genchecksum generates the checksum of the Header object
     def genchecksum(self, data):
-        if len(data) != 0:
-            fmtstring = "IHHBBH" + str(len(data)) + "s" + str((1000 - len(data))) + "x"
-            header = struct.pack(fmtstring, self.stream_id, self.SYN_number, self.ACK_number, self.flags,
+        fmtstring = "IHHBBH" + str(self.data_length) + "s"
+        header = struct.pack(fmtstring, self.stream_id, self.SYN_number, self.ACK_number, self.flags,
                              self.windows, self.data_length, data)
-            self.checksum = binascii.crc32(header)
-        else:
-            header = struct.pack("IHHBBH1000x", self.stream_id, self.SYN_number, self.ACK_number, self.flags,
-                                 self.windows, self.data_length)
-            self.checksum = binascii.crc32(header)
+        self.checksum = binascii.crc32(header)
 
     # serialize the Header object into a bytearray, bytes are returned to ensure that it works the same as
     # the example header in the given framework
@@ -54,9 +49,10 @@ class Header:
         self.checksum = struct.unpack("I", header[12:16])[0]
 
     # returns true or false depending on if the header is correct
-    def validate(self) -> bool:
-        header = struct.pack("IHHBBH", self.stream_id, self.SYN_number, self.ACK_number, self.flags,
-                             self.windows, self.data_length,)
+    def validate(self, data) -> bool:
+        fmtstring = "IHHBBH" + str(self.data_length) + "s"
+        header = struct.pack(fmtstring, self.stream_id, self.SYN_number, self.ACK_number, self.flags,
+                             self.windows, self.data_length, data)
         checksum = binascii.crc32(header)
         return checksum == self.checksum
 

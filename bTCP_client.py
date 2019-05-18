@@ -1,9 +1,10 @@
-from bTCP.retry import *
+from bTCP import *
 
 winsize = 100
 timeout = 10
 
-client = bTCP(own_ip="localhost", own_port=6542, filename="test.txt", dest_ip="localhost", dest_port=6543,
-                           window_size=winsize, timeout=timeout, initial_SYN=1)
+client = bTCP(own_ip="localhost", own_port=6542, dest_ip="localhost", dest_port=6543,
+                           window_size=winsize, timeout=timeout,)
 
-client.send_file()
+client.opening_handshake(1)
+client.closing_handshake()

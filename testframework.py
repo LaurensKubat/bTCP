@@ -2,7 +2,7 @@ import unittest
 import socket
 import time
 import sys
-from bTCP.retry import *
+from bTCPfolder import bTCP
 
 timeout = 100
 winsize = 100
@@ -64,11 +64,11 @@ class TestbTCPFramework(unittest.TestCase):
         #run_command(netem_add)
 
         # launch localhost server
-        self.server = bTCP(own_ip="localhost", own_port= 6543, filename="outputtest.txt", dest_ip="localhost",
-                           dest_port=6542, window_size=winsize, timeout=timeout)
+        self.server = bTCP.bTCP(own_ip="localhost", own_port= 6543, dest_ip="localhost",
+                                dest_port=6542, window_size=winsize, timeout=timeout)
 
-        self.client = bTCP(own_ip="localhost", own_port=6542, filename="test.txt", dest_ip="localhost", dest_port=6543,
-                           window_size=winsize, timeout=timeout)
+        self.client = bTCP.bTCP(own_ip="localhost", own_port=6542, dest_ip="localhost", dest_port=6543,
+                                window_size=winsize, timeout=timeout)
 
     def tearDown(self):
         """Clean up after testing"""
@@ -77,14 +77,18 @@ class TestbTCPFramework(unittest.TestCase):
         del self.server
         del self.client
 
+    def test_handshake(self):
+        self.client.opening_handshake(5)
+        self.assertTrue(self.client.connected)
+        print(self.client.connected)
+        self.assertTrue(self.server.connected)
+
     def test_ideal_network(self):
         """reliability over an ideal framework"""
         # setup environment (nothing to set)
 
         # launch localhost client connecting to server
-        self.server.listen()
         # client sends content to server
-        self.client.send_file()
         # server receives content from client
         # content received by server matches the content sent by client
 

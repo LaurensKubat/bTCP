@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from bTCP.header import *
+from header import *
 
 
 class Packet:
@@ -12,7 +12,7 @@ class Packet:
     def validate(self) -> bool:
         # correct = (len(self.data) == self.header.data_length)
         # removed validation of the data length since i decided to pad the messages
-        return self.header.validate()
+        return self.header.validate(self.data)
 
     def unpack(self, pack: bytes):
         self.header = new_header(pack[0:16])

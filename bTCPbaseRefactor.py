@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import socket
-from bTCP.packet import *
+from bTCPfolder.packet import *
 import time
 
 
