@@ -13,13 +13,14 @@ class bTCP(object):
         self.send_buf = Queue(window_size)
         # the receive buf contains packet.Packets
         self.recv_buf = Queue(window_size)
-        self.conn = Conn(own_ip, own_port, dest_ip, dest_port)
         self.cur_stream_id = 0
         self.connected = False
         self.window_size = window_size
         self.timeout = timeout
         self.original_syn = 0
         self.sent = {}
+        self.conn = Conn(own_ip, own_port, dest_ip, dest_port, recv_buf=self.recv_buf, send_buf=self.send_buf)
+        self.conn.start()
 
     def handle(self, pkt:packet.Packet):
         # handle a SYN packet
