@@ -3,6 +3,12 @@
 import binascii
 import struct
 
+SYN = 1
+ACK = 2
+FIN = 3
+SYNACK = 4
+FINACK = 5
+
 
 # Header represents the header of a bTCP package
 class Header:
@@ -19,10 +25,16 @@ class Header:
         self.checksum = checksum
 
     # genchecksum generates the checksum of the Header object
-    def genchecksum(self):
-        header = struct.pack("IHHBBH", self.stream_id, self.SYN_number, self.ACK_number, self.flags,
-                             self.windows, self.data_length, )
-        self.checksum = binascii.crc32(header)
+    def genchecksum(self, data):
+        if len(data) != 0:
+            fmtstring = "IHHBBH" + str(len(data)) + "s" + str((1000 - len(data))) + "x"
+            header = struct.pack(fmtstring, self.stream_id, self.SYN_number, self.ACK_number, self.flags,
+                             self.windows, self.data_length, data)
+            self.checksum = binascii.crc32(header)
+        else:
+            header = struct.pack("IHHBBH1000x", self.stream_id, self.SYN_number, self.ACK_number, self.flags,
+                                 self.windows, self.data_length)
+            self.checksum = binascii.crc32(header)
 
     # serialize the Header object into a bytearray, bytes are returned to ensure that it works the same as
     # the example header in the given framework
@@ -51,38 +63,24 @@ class Header:
     # is_syn checks if the SYN flag is on by bitshifting all the other bits away (done for efficiency)
     # the first bit is SYN, second is ACK third is FIN
     def is_syn(self) -> bool:
-        flag_buf = self.flags
-        syn_flag = flag_buf << 7 & 255
-        return bool(syn_flag)
+        return self.flags == SYN
 
     # is_ack checks if the ACK flag is set
     def is_ack(self) -> bool:
-        flag_buf = self.flags
-        flag_buf = flag_buf >> 1
-        ack_flag = flag_buf << 7 & 255
-        return bool(ack_flag)
+        return self.flags == ACK
 
     #is_fin checks if the FIN flag is set
     def is_fin(self) -> bool:
-        flag_buf = self.flags
-        flag_buf = flag_buf >> 2
-        fin_flag = flag_buf << 7 & 255
-        return bool(fin_flag)
+        return self.flags == FIN
+
+    def is_finack(self) -> bool:
+        return self.flags == FINACK
+
+    def is_synack(self) -> bool:
+        return self.flags == SYNACK
 
 
 def new_header(header: bytes) -> Header:
     buf = Header()
     buf.deserialize(header)
     return buf
-
-
-def set_syn(flag: int) -> int:
-    return flag | 1
-
-
-def set_ack(flag: int) -> int:
-    return flag | 2
-
-
-def set_fin(flag: int) -> int:
-    return flag | 4

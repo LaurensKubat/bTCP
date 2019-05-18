@@ -2,8 +2,7 @@ import unittest
 import socket
 import time
 import sys
-from bTCP.bTCP_server import *
-from bTCP.bTCP_client import *
+from bTCP.retry import *
 
 timeout = 100
 winsize = 100
@@ -62,19 +61,19 @@ class TestbTCPFramework(unittest.TestCase):
     def setUp(self):
         """Prepare for testing"""
         # default netem rule (does nothing)
-        run_command(netem_add)
+        #run_command(netem_add)
 
         # launch localhost server
-        self.server = Server("outputtest.txt", BasebTCP(own_port=6543, own_ip="localhost",
-                                                        timeout=timeout, window_size=winsize, dest_port=6542,
-                                                        dest_ip="localhost"))
-        self.client = Client(filename="test.txt", timeout=100,
-                        base=BasebTCP(own_port=6542, own_ip="localhost",
-                                      timeout=timeout, window_size=winsize, dest_port=6543, dest_ip="localhost"))
+        self.server = bTCP(own_ip="localhost", own_port= 6543, filename="outputtest.txt", dest_ip="localhost",
+                           dest_port=6542, window_size=winsize, timeout=timeout)
+
+        self.client = bTCP(own_ip="localhost", own_port=6542, filename="test.txt", dest_ip="localhost", dest_port=6543,
+                           window_size=winsize, timeout=timeout)
+
     def tearDown(self):
         """Clean up after testing"""
         # clean the environment and close the servers
-        run_command(netem_del)
+        # run_command(netem_del)
         del self.server
         del self.client
 
@@ -83,11 +82,10 @@ class TestbTCPFramework(unittest.TestCase):
         # setup environment (nothing to set)
 
         # launch localhost client connecting to server
+        self.server.listen()
         # client sends content to server
-        run_command(start_client_and_send_file)
+        self.client.send_file()
         # server receives content from client
-
-
         # content received by server matches the content sent by client
 
     def test_flipping_network(self):

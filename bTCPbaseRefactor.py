@@ -41,7 +41,8 @@ class BasebTCP(object):
             print("got syn ack over known conn")
             self.connected = True
             self.window_size = packet.header.windows
-            self.syn_ack = packet.header.SYN_number + 1
+            self.syn_ack = packet.header.SYN_number
+            print("syn_ack value is: " + str(self.syn_ack))
             self.send_ack(packet)
 
         # if we receive a SYN packet, and we are not connected, we set all setting and ack the syn
@@ -49,6 +50,7 @@ class BasebTCP(object):
             print("handling syn")
             self.cur_stream_id = packet.header.stream_id
             self.window_size = packet.header.windows
+            self.syn_ack = packet.header.SYN_number
             self.connected = True
             self.send_syn_ack(packet)
         # if the packet is an ack of our current stream or an ack of a sent packet (of a previous conn possibly)
@@ -94,8 +96,10 @@ class BasebTCP(object):
 
     def send_ack(self, packet: Packet):
         print("sending ack")
+        print(packet.header.SYN_number)
         tosend = Packet(data=b"")
         tosend.header.stream_id = packet.header.stream_id
+        print("ACK: " + str(tosend.header.SYN_number))
         tosend.header.ACK_number = tosend.header.SYN_number
         tosend.header.SYN_number = 0
         # reset the flags of the packet we are acking, if we want to send a syn_Ack of fin_ack we need to use
@@ -117,9 +121,9 @@ class BasebTCP(object):
         # we create the ack packet
         tosend = Packet(data=b"")
         tosend.header.stream_id = packet.header.stream_id
+        tosend.header.ACK_number = packet.header.SYN_number
         tosend.header.SYN_number = packet.header.SYN_number + 1
         print(tosend.header.SYN_number)
-        tosend.header.ACK_number = packet.header.SYN_number
         if packet.header.windows >= self.window_size:
             tosend.header.windows = self.window_size
         else:
@@ -128,6 +132,7 @@ class BasebTCP(object):
         tosend.header.flags = set_syn(tosend.header.flags)
         tosend.header.flags = set_ack(tosend.header.flags)
         print("sending syn_ack")
+        self.syn_ack = tosend.header.SYN_number
         self.sent.update({tosend.header.SYN_number: (tosend, time.time())})
         self.send(tosend)
 
