@@ -2,7 +2,6 @@ import unittest
 import socket
 import time
 import sys
-from bTCPfolder import bTCP
 
 timeout = 100
 winsize = 100

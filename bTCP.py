@@ -24,16 +24,23 @@ class bTCP(object):
         self.conn = Conn(own_ip, own_port, dest_ip, dest_port, recv_buf=self.recv_buf, send_buf=self.send_buf)
         self.conn.start()
         self.num_of_packets = 0
-        self.received = []
+        self.received = {}
+        # we use got_fin and fin_num to decide if we want to stop listening as the server, a server ends after
+        # 1 tcp connection. This is here to improve testing of bTCP
+        self.got_fin = False
+        self.fin_num = 0
 
-    def listen(self, listentime):
-        start = time.time()
-        while time.time() - start < listentime:
+    def listen(self):
+        while True:
             try:
                 pkt = self.recv_buf.get(False)
                 self.handle(pkt)
             except:
                 pass
+            # check if all our sent messages are acked and if we have received all messages, this way we can
+            # teardown the server during testing
+            if len(self.sent) == 0 and len(self.received) == (self.fin_num - self.original_syn - 1) and self.got_fin:
+                break
         self.conn.alive = False
 
     def handle(self, pkt: Packet):
@@ -52,6 +59,7 @@ class bTCP(object):
             self.send_buf.put(syn_ack, timeout=self.timeout)
             self.cur_stream_id = syn_ack.header.stream_id
             self.connected = True
+            self.original_syn = pkt.header.SYN_number
             print(self.connected)
             print(self.cur_stream_id)
 
@@ -71,7 +79,9 @@ class bTCP(object):
             fin_ack.header.genchecksum(fin_ack.data)
             self.send_buf.put(fin_ack, timeout=self.timeout)
             print("sending finack")
+            self.fin_num = pkt.header.SYN_number
             self.connected = False
+            self.got_fin = True
             print("server connection:")
             print(self.connected)
 
@@ -97,7 +107,7 @@ class bTCP(object):
                 ack_number = pkt.header.SYN_number + 1, stream_id=self.cur_stream_id, windows=self.window_size,
                 flags=ACK,
             ))
-            self.received.append(pkt)
+            self.received.update({pkt.header.SYN_number: pkt})
             ack.header.genchecksum(ack.data)
             self.send_buf.put(ack)
 
@@ -252,19 +262,13 @@ class Conn(Thread):
                 data, addr = self.socket.recvfrom(1016)
                 pkt = Packet(b"")
                 pkt.unpack(data)
-                print("recv SYN: " + str(pkt.header.SYN_number))
                 if not pkt.validate():
-                    print("packet with the following flags was not validated")
-                    print(pkt.header.flags)
                     continue
                 self.recv_buf.put(pkt)
             except BlockingIOError:
                 pass
             if self.send_buf.qsize() > 0:
                 pkt = self.send_buf.get()
-                print(pkt)
-                print("sending packet SYN:" + str(pkt.header.SYN_number))
-                print("flags are: " + str(pkt.header.flags))
                 self.socket.sendto(pkt.pack(), (self.dest_ip, self.dest_port))
 
 
