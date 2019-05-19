@@ -15,17 +15,13 @@ class Packet:
         return self.header.validate(self.data)
 
     def unpack(self, pack: bytes):
-        self.header = new_header(pack[0:16])
+        self.header = new_header(pack[:16])
         self.data = pack[16:]
 
-    # TODO check if this needs to use struct
     def pack(self) -> bytes:
         buf = b""
         buf += self.header.serialize()
         buf += self.data
-        # pad the packet if needed
-        if self.header.data_length < 1000:
-            buf += b'0' * (1000 - self.header.data_length)
         return buf
 
     # is_'flag' functions are not tested in the unittests since they are tested in the header functions

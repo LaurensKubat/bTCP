@@ -2,7 +2,7 @@
 
 
 import unittest
-from bTCPfolder.header import *
+from header import *
 import binascii
 
 
