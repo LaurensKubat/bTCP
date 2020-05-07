@@ -2,6 +2,7 @@ import unittest
 import socket
 import time
 import sys
+import os
 
 timeout = 100
 winsize = 100
@@ -51,6 +52,10 @@ def run_command(command, cwd=None, shell=True):
         print("2. problem running command : \n   ", str(command), " ", process.returncode)
 
 def compare_file_bytewise(input, output) -> bool:
+    i = 0
+    while i < len(input):
+        if input[i] != output[i]:
+            return False
     return True
 
 
@@ -87,7 +92,9 @@ class TestbTCPFramework(unittest.TestCase):
         # setup environment (nothing to set)
 
         # launch localhost client connecting to server
+        server_thread = threading.Thread(self.server.listen())
         # client sends content to server
+        client.send("test data bla bla bla bla asdasdasdasdasdasdasd".encode("utf-8"))
         # server receives content from client
         # content received by server matches the content sent by client
 
@@ -97,9 +104,10 @@ class TestbTCPFramework(unittest.TestCase):
         # setup environment
         run_command(netem_change.format("corrupt 1%"))
 
-        # launch localhost client connecting to server
-
+         # launch localhost client connecting to server
+        server_thread = threading.Thread(self.server.listen())
         # client sends content to server
+        client.send("test data bla bla bla bla asdasdasdasdasdasdasd".encode("utf-8"))
 
         # server receives content from client
 
@@ -111,8 +119,9 @@ class TestbTCPFramework(unittest.TestCase):
         run_command(netem_change.format("duplicate 10%"))
 
         # launch localhost client connecting to server
-
+        server_thread = threading.Thread(self.server.listen())
         # client sends content to server
+        client.send("test data bla bla bla bla asdasdasdasdasdasdasd".encode("utf-8"))
 
         # server receives content from client
 
@@ -124,8 +133,9 @@ class TestbTCPFramework(unittest.TestCase):
         run_command(netem_change.format("loss 10% 25%"))
 
         # launch localhost client connecting to server
-
+        server_thread = threading.Thread(self.server.listen())
         # client sends content to server
+        client.send("test data bla bla bla bla asdasdasdasdasdasdasd".encode("utf-8"))
 
         # server receives content from client
 
@@ -137,8 +147,9 @@ class TestbTCPFramework(unittest.TestCase):
         run_command(netem_change.format("delay 20ms reorder 25% 50%"))
 
         # launch localhost client connecting to server
-
+        server_thread = threading.Thread(self.server.listen())
         # client sends content to server
+        client.send("test data bla bla bla bla asdasdasdasdasdasdasd".encode("utf-8"))
 
         # server receives content from client
 
@@ -150,8 +161,9 @@ class TestbTCPFramework(unittest.TestCase):
         run_command(netem_change.format("delay " + str(timeout) + "ms 20ms"))
 
         # launch localhost client connecting to server
-
+        server_thread = threading.Thread(self.server.listen())
         # client sends content to server
+        client.send("test data bla bla bla bla asdasdasdasdasdasdasd".encode("utf-8"))
 
         # server receives content from client
 
@@ -164,8 +176,9 @@ class TestbTCPFramework(unittest.TestCase):
         run_command(netem_change.format("corrupt 1% duplicate 10% loss 10% 25% delay 20ms reorder 25% 50%"))
 
         # launch localhost client connecting to server
-
+        server_thread = threading.Thread(self.server.listen())
         # client sends content to server
+        client.send("test data bla bla bla bla asdasdasdasdasdasdasd".encode("utf-8"))
 
         # server receives content from client
 
